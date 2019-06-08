@@ -16,8 +16,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,6 +27,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * main class for making API calls.
@@ -322,19 +326,42 @@ public class ForceApi {
             // We build the result manually, because we can't pass the type information easily into
             // the JSON parser mechanism.
 
+
             QueryResult<T> result = new QueryResult<T>();
-            JsonNode root = jsonMapper.readTree(res.getStream());
-            result.setDone(root.get("done").booleanValue());
-            result.setTotalSize(root.get("totalSize").intValue());
-            if (root.get("nextRecordsUrl") != null) {
-                result.setNextRecordsUrl(root.get("nextRecordsUrl").textValue());
+
+            InputStream resStream = res.getStream();
+
+            if (clazz == String.class)
+            {
+            	 String text = org.apache.commons.io.IOUtils.toString(resStream, UTF_8.name());
+	            JsonNode root = jsonMapper.readTree(text);
+	            result.setDone(root.get("done").booleanValue());
+	            result.setTotalSize(root.get("totalSize").intValue());
+	            if (root.get("nextRecordsUrl") != null)
+	            {
+		            result.setNextRecordsUrl(root.get("nextRecordsUrl").textValue());
+	            }
+	            result.setRawResults(text);
+	            return result;
+
             }
-            List<T> records = new ArrayList<T>();
-            for (JsonNode elem : root.get("records")) {
-                records.add(jsonMapper.readValue(normalizeCompositeResponse(elem).traverse(), clazz));
+            else
+            {
+	            JsonNode root = jsonMapper.readTree(res.getStream());
+	            result.setDone(root.get("done").booleanValue());
+	            result.setTotalSize(root.get("totalSize").intValue());
+	            if (root.get("nextRecordsUrl") != null)
+	            {
+		            result.setNextRecordsUrl(root.get("nextRecordsUrl").textValue());
+	            }
+	            List<T> records = new ArrayList<T>();
+	            for (JsonNode elem : root.get("records"))
+	            {
+		            records.add(jsonMapper.readValue(normalizeCompositeResponse(elem).traverse(), clazz));
+	            }
+	            result.setRecords(records);
+	            return result;
             }
-            result.setRecords(records);
-            return result;
         } catch (JsonParseException e) {
             throw new ResourceException(e);
         } catch (JsonMappingException e) {

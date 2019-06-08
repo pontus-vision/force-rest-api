@@ -12,7 +12,7 @@ public class ApiConfig {
 	String apiVersionString;
 	String username;
 	String password;
-	String loginEndpoint = "https://login.salesforce.com";
+	String loginEndpoint = "https://login.salesforce.com/services/oauth2/token";
 	String clientId;
 	String clientSecret;
 	String redirectURI;
